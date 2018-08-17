@@ -157,16 +157,16 @@ void list_lru_isolate_move(struct list_lru_one *list, struct list_head *item,
 }
 EXPORT_SYMBOL_GPL(list_lru_isolate_move);
 
-static unsigned long __list_lru_count_one(struct list_lru *lru,
-					  int nid, int memcg_idx)
+unsigned long list_lru_count_one(struct list_lru *lru,
+				 int nid, struct mem_cgroup *memcg)
 {
 #if defined(CONFIG_MEMCG) && !defined(CONFIG_SLOB)
 	struct list_lru_node *nlru = &lru->node[nid];
 	struct list_lru_one *l;
 	unsigned long count;
 
-	spin_lock(&nlru->lock);
-	l = list_lru_from_memcg_idx(nlru, memcg_idx);
+	rcu_read_lock();
+	l = list_lru_from_memcg_idx(nlru, memcg_cache_id(memcg));
 	count = l->nr_items;
 	spin_unlock(&nlru->lock);
 
@@ -174,12 +174,6 @@ static unsigned long __list_lru_count_one(struct list_lru *lru,
 #else
 	return READ_ONCE(lru->node[nid].lru.nr_items);
 #endif
-}
-
-unsigned long list_lru_count_one(struct list_lru *lru,
-				 int nid, struct mem_cgroup *memcg)
-{
-	return __list_lru_count_one(lru, nid, memcg_cache_id(memcg));
 }
 EXPORT_SYMBOL_GPL(list_lru_count_one);
 
